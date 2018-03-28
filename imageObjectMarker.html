@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <title>Image Object Marker</title>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <meta name="author" content="Leandro Luque"/>
+    <meta name="description" content="Image object marker to create datasets for AI algorithms"/>
+    <link rel="stylesheet" href="css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="css/bootstrap-toggle.min.css"/>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"/>
+    <link rel="stylesheet" href="css/image-object-marker.css"/>
+</head>
+<body onload="adjustMarkingContainerSize()">
+<div class="container">
+    <div class="page-header">
+        <h1>Marcação de Frutos em Imagens</h1>
+    </div>
+    <em>Instruções:</em>
+    <p>Clique sobre uma posição da imagem original e marque os frutos no painel
+        'Área de Marcação de Frutos'.</p>
+    <div class="row">
+        <div class="col-md-8">
+            <div class="panel panel-default">
+                <div class="panel-heading">Imagem Original</div>
+                <div class="panel-body" id="originalImagePanel">
+                    <img id="drawnImage" src="img/original-image.jpg" data-zoom-image="img/original-image.jpg"/></div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="panel panel-default">
+                <div class="panel-heading">Área de Marcação de Frutos</div>
+                <div class="panel-body" id="markingPanel">
+                    <div id="imageContainer" class="resize-container">
+                        <div class="resize-drag" id="markingRectangle">
+                        </div>
+                        <div id="imageForMarking"></div>
+                    </div>
+                </div>
+                <div class="panel-footer">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <input type="checkbox" id="tipo-fruto" name="tipofruto" class="input-block-level"/>
+                        </div>
+                        <div class="col-md-6">
+                            <button type="submit" class="btn btn-default btn-block" onclick="addFruit()"/>
+                            <i class="fa fa-plus-circle"></i> Adicionar
+                            </button>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Carregamento tardio de scripts -->
+    <script src="js/jquery-3.3.1.slim.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <!-- ElevateZoom -->
+    <!-- OBS: Esta biblioteca foi modificada por Leandro Luque, pois o evento the clique name
+         imagem não retornava as propriedades clientX nem clientY. Atualmente a biblioteca
+         trata automaticamente este evento e executa a função callback, passando a
+         posição clientX e clientY por parâmetro. -->
+    <script src="js/jquery.elevateZoom-3.0.8.min.js"></script>
+    <script src="js/interact.min.js"></script>
+    <script src="js/bootstrap-toggle.min.js"></script>
+    <script src="js/image-object-marker.js"></script>
+</body>
+</html>
