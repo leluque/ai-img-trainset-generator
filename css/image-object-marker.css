@@ -43,5 +43,11 @@
 
 }
 
-.markingPanel-fruit {   
+.markingPanel-fruit { 
+    background: none;
+
+}
+
+.markingPanel-fruit-selected {   
+    background: rgba(0,0,255,0.3);
 }

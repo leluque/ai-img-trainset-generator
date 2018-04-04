@@ -140,12 +140,25 @@ function addFruitToMarkingPanel(clickX, clickY, xRatio, yRatio) {
             divHeight * yRatio, element.className);
             //mDiv.setAttribute('data-x', parseFloat(element.getAttribute('data-x')));
             //mDiv.setAttribute('data-y', parseFloat(element.getAttribute('data-y')));
-            mDiv.setAttribute('id', element.getAttribute('id'));
+            mDiv.setAttribute('divid', parseInt(element.getAttribute('id')));
             mDiv.setAttribute('data-x', element.getAttribute('data-x'));
             mDiv.setAttribute('data-y', element.getAttribute('data-y'));
             mDiv.setAttribute('data-width', $(".resize-drag").css("width"));
             mDiv.setAttribute('data-height', $(".resize-drag").css("height"));
             mDiv.style.border = '3px solid rgba(255, 0, 0, 0.8)';
+            mDiv.setAttribute('selected', false);
+            mDiv.onclick = function() {
+                if (!mDiv.selected) {
+                    mDiv.selected = true;
+                    mDiv.style.backgroundColor = 'rgba(0,0,255,0.3)';
+                    mDiv.classList.toggle('markingPanel-fruit-selected');
+                } else {
+                    mDiv.selected = false;
+                    mDiv.style.backgroundColor = 'transparent';
+                    mDiv.classList.toggle('markingPanel-fruit-selected');
+                }
+            }
+
             imageContainer.insertBefore(mDiv, imageContainer.childNodes[0]);    
         }
     });
@@ -182,9 +195,15 @@ function fruitSelector() {
     }
 }
 
-// Delete fuitmarker
-function deleteFruitMarker(markerDiv) {
-    $('markerDiv').remove();
+// Delete marked fruit
+function deleteMarkedFruit() {
+    Array.from(document.getElementsByClassName("markingPanel-fruit")).forEach(function(element) {
+        if (element.getAttribute('selected').value == true) {
+            $('#' + markingRectanglePositions[element.getAttribute('divid')].id).remove();
+            markingRectanglePositions.splice(element.getAttribute('divid'),1);
+    }
+    });
+        $('.markingPanel-fruit-selected').remove();
 }
 
 // Select fruits to display
