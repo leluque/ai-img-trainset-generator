@@ -7,7 +7,7 @@ var markingAreaTopRelatedToOriginalImage = 0;
 var markingAreaLeftRelatedToOriginalImage = 0;
 
 /**
- * Get the size of the original image and send it as parameter to the callback function.
+ * Get the size of the original image and send it as an argument to a callback function.
  * @param callback A callback function to send the width and height as arguments.
  */
 function getOriginalImageSize(callback) {
@@ -22,7 +22,7 @@ function getOriginalImageSize(callback) {
 }
 
 /**
- * This function updates the marking area size to make it a square.
+ * Update the marking area size to make it a square.
  */
 function adjustMarkingContainerSize() {
     var imageContainer = document.getElementById("imageContainer");
@@ -32,7 +32,7 @@ function adjustMarkingContainerSize() {
 }
 
 /**
- * Create and return a div for fruit marking on the original image.
+ * Create and return a rectangular div for fruit marking on the original image.
  */
 function generateDivToMarkFruit(x, y, width, height) {
     var iDiv = document.createElement('div');
@@ -175,10 +175,10 @@ $(document).ready(function () {
     markingRectangle.setAttribute('data-height', $(".resize-drag").css("height"));
 
     // Create a toggle button.
-    $('#tipo-fruto').bootstrapToggle({
+    $('#fruit-type').bootstrapToggle({
         onstyle: 'success',
-        on: 'Fruto verde',
-        off: 'Fruto maduro',
+        on: 'Green fruit',
+        off: 'Ripe fruit',
         offstyle: 'warning'
     });
 });
