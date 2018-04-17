@@ -29,25 +29,32 @@
 .resize-drag {
     position: absolute;
     background: none;
-    border: 4px solid rgba(0, 100, 255, 0.75);
     width: 120px;
     height: 120px;
     box-sizing: border-box;
 }
 
-.unripe-fruit {
-        
+#markingRectangle {
+    border: 4px dashed rgba(0, 100, 255, 0.75);	
 }
 
-.ripe-fruit {
-
+.type1-object {
+    border: 2px solid rgba(0, 0, 255, 1) !important;
 }
 
-.markingPanel-fruit { 
+.type2-object {
+    border: 2px solid rgba(255, 0, 0, 1) !important;
+}
+
+.markingPanel-object { 
     background: none;
-
+	border: 3px solid rgba(255, 0, 0, 0.8) !important;
 }
 
-.markingPanel-fruit-selected {   
-    background: rgba(0,0,255,0.3);
+.markingPanel-object-selected {   
+    background: rgba(0, 0, 255, 0.3);
+}
+
+.dont-display {
+	display: none;
 }

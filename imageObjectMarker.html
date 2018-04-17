@@ -11,26 +11,26 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"/>
     <link rel="stylesheet" href="css/image-object-marker.css"/>
 </head>
-<body onload="adjustMarkingContainerSize()">
+<body onload="adjustMarkingAreaSize()">
 <div class="container">
     <div class="page-header">
-        <h1>Marcação de Frutos em Imagens</h1>
+        <h1>Object Marking on Images</h1>
     </div>
-    <em>Instruções:</em>
-    <p>Clique sobre uma posição da imagem original e marque os frutos no painel
-        'Área de Marcação de Frutos'.</p>
+    <em>Instructions:</em>
+    <p>Click at a position of the drawn image (left) and mark the objects you can identify
+        in the 'Object Marking Area'.</p>
     <div class="row">
         <div class="col-md-8">
             <div class="panel panel-default">
                 <div class="panel-heading clearfix">
-                    <div class="panel-title pull-left">Imagem Original</div>
+                    <div class="panel-title pull-left">Drawn image</div>
                     <div class="input-group pull-right">
                         <div>
                             <label>
-                                <input type="checkbox"  id="ripe" name="ripefruit" value="ripe-fruit" checked="true" onclick="displayFruits(this)"/> Frutos Maduros
+                                <input type="checkbox"  id="type1" name="type1object" value="type1-object" checked="true" onclick="displayObjects(this)"/> Object Type 1
                             </label>
                             <label>
-                                <input type="checkbox" id="unripe" name="unripefruit" value="unripe-fruit" checked="true" onclick="displayFruits(this)"> Frutos Verdes
+                                <input type="checkbox" id="type2" name="type2object" value="type2-object" checked="true" onclick="displayObjects(this)"> Object Type 2
                             </label>
                         </div>
                     </div>
@@ -42,15 +42,15 @@
         <div class="col-md-4">
             <div class="panel panel-default">
                 <div class="panel-heading clearfix">
-                    <div class="panel-title pull-left">Área de Marcação de Frutos</div>
+                    <div class="panel-title pull-left">Object Marking Area</div>
                     <div class="button-group pull-right">
-                        <button type="button" onclick="fruitSelector()">
+                        <button type="button" class="toolbar-buttons" onclick="toggleMarkingRectangleVisibility()">
                             <i class="fa fa-edit"></i>
                         </button>
-                        <button type="button" onclick="edtiMarkingRectangle()">
+                        <button type="button" class="toolbar-buttons" onclick="editMarkingRectangle()">
                             <i class="fa fa-pencil"></i>
                         </button>
-                        <button type="button" onclick="deleteMarkedFruit()">
+                        <button type="button" class="toolbar-buttons" onclick="deleteSelectedObjectMarkings()">
                             <i class="fa fa-trash"></i>
                         </button>
                     </div>
@@ -65,11 +65,14 @@
                 <div class="panel-footer">
                     <div class="row">
                         <div class="col-md-6">
-                            <input type="checkbox" id="fruit-type" name="fruitType" class="input-block-level"/>
+                            <input type="checkbox" id="objectType" name="objectType" class="input-block-level"/>
                         </div>
                         <div class="col-md-6">
-                            <button type="submit" class="btn btn-default btn-block" onclick="addFruit()"/>
+                            <button type="submit" id="add" class="btn btn-default btn-block" onclick="addObjectMarker()"/>
                             <i class="fa fa-plus-circle"></i> Add
+                            </button>
+                            <button type="submit" id="update" class="btn btn-default btn-block dont-display" onclick="updateMarkings()"/>
+                            <i class="fa fa-plus-circle"></i> Update
                             </button>
                         </div>
                     </div>
