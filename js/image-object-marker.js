@@ -218,10 +218,6 @@ function showMarkedObjectOnMarkingPanel(markingAreaX1, markingAreaY1, markingAre
 											 divWidth, divHeight, element.className);
 
 		mDiv.setAttribute('div-id', parseInt(element.getAttribute('id')));
-		mDiv.setAttribute('data-x', element.style.left * horizontalRatio);
-		mDiv.setAttribute('data-y', element.style.top * verticalRatio);
-		mDiv.setAttribute('data-width', divWidth);
-		mDiv.setAttribute('data-height', divHeight);
 		mDiv.setAttribute('selected', false);
 
 		// When the user clicks on an object marker, change its background.
@@ -457,6 +453,7 @@ function verticalPixelToPercentage(verticalPixel) {
 function registerInteractionWithMarkings() {
 	// Every element with the 'resize-drag' class must allow user interaction
 	// for dragging and resizing.
+	interact('.resize-drag').unset();
 	interact('.resize-drag')
 		.draggable({
 			onmove: window.dragMoveListener,
