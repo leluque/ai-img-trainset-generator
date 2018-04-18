@@ -56,5 +56,5 @@
 }
 
 .dont-display {
-	display: none;
+	display: none !important;
 }

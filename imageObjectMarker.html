@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"/>
     <link rel="stylesheet" href="css/image-object-marker.css"/>
 </head>
-<body onload="adjustMarkingAreaSize()">
+<body onload="adjustMarkingPanelSize()">
 <div class="container">
     <div class="page-header">
         <h1>Object Marking on Images</h1>
@@ -27,10 +27,10 @@
                     <div class="input-group pull-right">
                         <div>
                             <label>
-                                <input type="checkbox"  id="type1" name="type1object" value="type1-object" checked="true" onclick="displayObjects(this)"/> Object Type 1
+                                <input type="checkbox"  id="type1" name="type1object" value="type1-object" checked="true" onclick="toggleObjectsMarkingVisibility(this)"/> Object Type 1
                             </label>
                             <label>
-                                <input type="checkbox" id="type2" name="type2object" value="type2-object" checked="true" onclick="displayObjects(this)"> Object Type 2
+                                <input type="checkbox" id="type2" name="type2object" value="type2-object" checked="true" onclick="toggleObjectsMarkingVisibility(this)"> Object Type 2
                             </label>
                         </div>
                     </div>
@@ -44,13 +44,13 @@
                 <div class="panel-heading clearfix">
                     <div class="panel-title pull-left">Object Marking Area</div>
                     <div class="button-group pull-right">
-                        <button type="button" class="toolbar-buttons" onclick="toggleMarkingRectangleVisibility()">
-                            <i class="fa fa-edit"></i>
+                        <button type="button" class="toolbar-buttons" onclick="toggleMarkingRectangleVisibility()" title="Toggle the objects' marking rectangle visibility.">
+                            <i id="toggleMarkingRectangleVisibility" class="fa fa-eye-slash"></i>
                         </button>
-                        <button type="button" class="toolbar-buttons" onclick="editMarkingRectangle()">
+                        <button type="button" class="toolbar-buttons" onclick="editMarkingRectangle()" title="Enable objects' marking edition.">
                             <i class="fa fa-pencil"></i>
                         </button>
-                        <button type="button" class="toolbar-buttons" onclick="deleteSelectedObjectMarkings()">
+                        <button type="button" class="toolbar-buttons" onclick="deleteSelectedObjectMarkings()" title="Delete the selected objects' marking.">
                             <i class="fa fa-trash"></i>
                         </button>
                     </div>
@@ -68,11 +68,11 @@
                             <input type="checkbox" id="objectType" name="objectType" class="input-block-level"/>
                         </div>
                         <div class="col-md-6">
-                            <button type="submit" id="add" class="btn btn-default btn-block" onclick="addObjectMarker()"/>
+                            <button type="submit" id="add" class="btn btn-default btn-block" onclick="addObjectMarking()"/>
                             <i class="fa fa-plus-circle"></i> Add
                             </button>
-                            <button type="submit" id="update" class="btn btn-default btn-block dont-display" onclick="updateMarkings()"/>
-                            <i class="fa fa-plus-circle"></i> Update
+							<button type="submit" id="update" class="btn btn-default btn-block dont-display" onclick="updateMarkings()"/>
+                            <i class="fa fa-save"></i> Update
                             </button>
                         </div>
                     </div>

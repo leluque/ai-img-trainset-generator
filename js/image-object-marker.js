@@ -2,15 +2,28 @@
 
 // **********************************************
 // Global variables.
-// At which position y of the original image is the top border of the marking area?
-let markingAreaTopRelatedToOriginalImage = 0;
-// At which position x of the original image is the left border of the marking area?
-let markingAreaLeftRelatedToOriginalImage = 0;
-// Coordinates of each object mark on the original image.
+// A reference to some HTML elements.
+let drawnImage = null;
+let imageContainer = null;
+let markingPanel = null;
+let markingRectangle = null;
+let originalImagePanel = null;
+let updateButton = null;
+let addButton = null;
+let imageForMarking = null;
+
+// How far must objects' marking be? In other words, the absolute difference
+// between two different objects' marking must be greater than TOLERANCE.
+const TOLERANCE = 0.001;
+// At which position y of the original image is the top border of the marking panel?
+let markingPanelTopRelatedToOriginalImage = 0;
+// At which position x of the original image is the left border of the marking panel?
+let markingPanelLeftRelatedToOriginalImage = 0;
+// Objects already marked.
 let markedObjects = new Array();
-// Sequence used to generate marks' ids.
+// Sequence used to generate objects' marking ids.
 let idSequence = 0;
-// Last position where the user clicked on the drawn image.
+// Last position at which the user clicked the drawn image.
 let clickedX = 0;
 let clickedY = 0;
 // Original image size.
@@ -29,6 +42,7 @@ let status = NON_EDITING;
 
 /**
  * Get the size of the original image and send it as an argument to a callback function.
+ * This functions needs to be called only once.
  * @param {Function} callback(size) A callback function that will receive the image size as its argument.
  */
 function getOriginalImageSize(callback) {
@@ -39,72 +53,86 @@ function getOriginalImageSize(callback) {
         size.width = image.width;
         callback(size);
     }
-    image.src = $('#drawnImage').attr('src');
+    image.src = drawnImage.getAttribute('src');
 }
 
 /**
- * Update the marking area size to make it a square.
+ * Update the marking panel size to make it a square.
  */
-function adjustMarkingAreaSize() {
-    const imageContainer = $('#imageContainer');
-    const markingPanel = $('#markingPanel');
-    imageContainer.width(markingPanel.width() + "px");
-    imageContainer.height(markingPanel.width() + "px");
+function adjustMarkingPanelSize() {
+    imageContainer.style.width = imageContainer.style.height = `${markingPanel.clientWidth}px`;
 }
 
 /**
  * Create and return a rectangular div for marking an object on the
- * drawn image or on the marking area.
+ * drawn image or on the marking panel.
+ * @param {Number} x The x-coordinate of the marking.
+ * @param {Number} y The y-coordinate of the marking.
+ * @param {Number} width The marking width.
+ * @param {Number} height The marking height.
+ * @param {String} classType The class type. Must be 'drawn-image', 'type1-object' or 'type2-object'.
  */
 function generateDivForMarkingObject(x, y, width, height, classType) {
     const generatedDiv = document.createElement('div');
-    generatedDiv.style.position = "absolute";
-    generatedDiv.style.left = x + "px";
-    generatedDiv.style.top = y + "px";
-    generatedDiv.style.width = width + "px";
-    generatedDiv.style.height = height + "px";
+	generatedDiv.style.position = "absolute";
+	// The position and dimension in the original image is based on percentages.
+	if('drawn-image' === classType) {
+		generatedDiv.style.left = horizontalPixelToPercentage(x) + "%";
+		generatedDiv.style.top = verticalPixelToPercentage(y) + "%";
+		generatedDiv.style.width = horizontalPixelToPercentage(width) + "%";
+		generatedDiv.style.height = verticalPixelToPercentage(height) + "%";
+	} else {
+		generatedDiv.style.left = x + "px";
+		generatedDiv.style.top = y + "px";
+		generatedDiv.style.width = width + "px";
+		generatedDiv.style.height = height + "px";
+	}
 
     generatedDiv.className = {
-        "originalImage": (document.getElementById('objectType').checked ? "type1-object" : "type2-object"),
-        "type1-object": "type1-object markingPanel-object",
-        "type2-object": "type2-object markingPanel-object"
+        'drawn-image': (document.getElementById('objectType').checked ? "type1-object" : "type2-object"),
+        'type1-object': "type1-object markingPanel-object",
+        'type2-object': "type2-object markingPanel-object"
     }[classType];
 
     return generatedDiv;
 }
 
 /**
- * Add an object marker (a rectangle over an object) on the drawn image.
+ * Add the marking rectangle (on the marking panel) in the drawn image.
  * It also saves the generated div in the markedObjects array.
  */
-function addObjectMarker() {
-	if(EDITING === status) { // If the user is editing the marking area, stop.
-		alert('You are editing the marking area. Click on the "Update" button to save the changes before adding a new marking.');
+function addObjectMarking() {
+	if(EDITING === status) { // If the user is editing the marking panel, do not allow adding a new marking.
+		alert('You are editing the marking panel. Click on the "Update" button to save the changes before adding a new marking.');
+		return;
+	}
+	// If the marking rectangle is not visible, do not allow adding a new marking.
+	if(isMarkingRectangleVisible()) {
+		alert('The marking rectangle is not visible. Click on the first toolbar icon to make it visibile.');
 		return;
 	}
 	
 	// Get the marking rectangle position and size.
-	const markingRectangle = $("#markingRectangle")
-	const x = parseFloat(markingRectangle.attr('data-x'));
-	const y = parseFloat(markingRectangle.attr('data-y'));
-	const width = parseFloat(markingRectangle.attr('data-width'));
-	const height = parseFloat(markingRectangle.attr('data-height'));
+	const x = parseFloat(markingRectangle.getAttribute('data-x'));
+	const y = parseFloat(markingRectangle.getAttribute('data-y'));
+	const width = parseFloat(markingRectangle.getAttribute('data-width'));
+	const height = parseFloat(markingRectangle.getAttribute('data-height'));
 	
 	// Calculate the div position on the drawn image.
-    const divX1 = (x + markingAreaLeftRelatedToOriginalImage) / horizontalRatio;
-	const divY1 = (y + markingAreaTopRelatedToOriginalImage) / verticalRatio;
+    const divX1 = (x + markingPanelLeftRelatedToOriginalImage) / horizontalRatio;
+	const divY1 = (y + markingPanelTopRelatedToOriginalImage) / verticalRatio;
 	const divWidth = width / horizontalRatio;
 	const divHeight = height / verticalRatio;
 
 	// Check whether there is another object marked at the same position and
 	// with the same size. If it is the case, discard the new object.
 	let foundOneEqual = false;
-	const tolerance = 0.01;
-	$.each(markedObjects, function(index, value) {
-	    if (Math.abs(divX1 - parseFloat(value.style.left)) < tolerance &&
-		    Math.abs(divY1 - parseFloat(value.style.top)) < tolerance &&
-			Math.abs(width / horizontalRatio - parseFloat(value.style.width)) < tolerance &&
-			Math.abs(height / verticalRatio - parseFloat(value.style.height)) < tolerance) {
+	
+	markedObjects.forEach(function(item, index) {
+	    if (Math.abs(divX1 - horizontalPercentageToPixel(item.style.left)) < TOLERANCE &&
+		    Math.abs(divY1 - verticalPercentageToPixel(item.style.top)) < TOLERANCE &&
+			Math.abs(width / horizontalRatio - horizontalPercentageToPixel(item.style.width)) < TOLERANCE &&
+			Math.abs(height / verticalRatio - verticalPercentageToPixel(item.style.height)) < TOLERANCE) {
 			foundOneEqual = true;
 			return;
 		}
@@ -114,16 +142,15 @@ function addObjectMarker() {
 		return;
 	}
 	
-	// Generate a new div for the drawn image at the right position and with the right
+	// Generate a new div for the drawn image at the correct position and with the correct
 	// dimension.
-	const iDiv = generateDivForMarkingObject(divX1, divY1, divWidth, divHeight, "originalImage");
+	const iDiv = generateDivForMarkingObject(divX1, divY1, divWidth, divHeight, 'drawn-image');
 	iDiv.id = idSequence++;
 	
 	// Save the object marker.
 	markedObjects.push(iDiv);        
 
 	// Add the div to the drawn image.
-	const originalImagePanel = document.getElementById("originalImagePanel");
 	originalImagePanel.insertBefore(iDiv, originalImagePanel.childNodes[0]);			
 
 	// Show the marker for the added object.
@@ -131,36 +158,36 @@ function addObjectMarker() {
 }
 
 /**
- * Update the markings (probably) changed by the user on the marking area.
+ * Update the markings (that was probably) changed by the user on the marking panel.
  */
 function updateMarkings() {
-	$('.markingPanel-object').each(function() {
-		let element = $(this);
-		let marking = markedObjects[element.attr('div-id')];
+	Array.from(document.getElementsByClassName('markingPanel-object')).forEach(function(item, index) {
+		let marking = markedObjects[item.getAttribute('div-id')];
 
 		// Get the marking position and size.
 		// In this case, data-x stores the delta x related to the original div position.
 		// In this case, data-y stores the delta y related to the original div position.
-		const x = parseFloat(element.attr('data-x'));
-		const y = parseFloat(element.attr('data-y'));
-		const width = parseFloat(element.attr('data-width'));
-		const height = parseFloat(element.attr('data-height'));
+		const x = parseFloat(item.getAttribute('data-x'));
+		const y = parseFloat(item.getAttribute('data-y'));
+		const width = parseFloat(item.getAttribute('data-width'));
+		const height = parseFloat(item.getAttribute('data-height'));
 		
 		// Calculate the new div position on the drawn image.
 		const divWidth = width / horizontalRatio;
 		const divHeight = height / verticalRatio;
-		marking.style.left = x / horizontalRatio + parseFloat(marking.style.left.replace("px","")) + "px";
-		marking.style.top = y / verticalRatio + parseFloat(marking.style.top.replace("px","")) + "px";
-		marking.style.width = divWidth + "px";
-		marking.style.height = divHeight + "px";
+		marking.style.left = horizontalPixelToPercentage(x / horizontalRatio + horizontalPercentageToPixel(marking.style.left)) + "%";
+		marking.style.top = verticalPixelToPercentage(y / verticalRatio + verticalPercentageToPixel(marking.style.top)) + "%";
+		marking.style.width = horizontalPixelToPercentage(divWidth) + "%";
+		marking.style.height = verticalPixelToPercentage(divHeight) + "%";
 		
-		$(this).removeClass('resize-drag');
-		$(this).removeClass('markingPanel-object-selected');
+		item.classList.remove('resize-drag');
+		item.classList.remove('markingPanel-object-selected');		
 	});
 	// Hide the 'Update' button and enable the 'Add' button.
-	$('#update').hide();
-	$('#add').show();
+	updateButton.classList.add('dont-display');
+	addButton.classList.remove('dont-display');
 	status = NON_EDITING;
+	
 	// It was necessary to show again the objects marks because
 	// the data-x and data-y positions were not working properly
 	// after updating them.
@@ -172,11 +199,13 @@ function updateMarkings() {
  * The object is an element of the array markedObjects.
  */
 function showMarkedObjectOnMarkingPanel(markingAreaX1, markingAreaY1, markingAreaX2, markingAreaY2, element) {
-	let divX = Number(element.style.left.replace("px", ""));
-	let divY = Number(element.style.top.replace("px", ""));
-	let divWidth = Number(element.style.width.replace("px", ""));
-	let divHeight = Number(element.style.height.replace("px", ""));
-	
+	// Convert the div position in percentages to pixels.
+	let divX = Number(element.style.left.replace("%", "")) * drawnImage.clientWidth / 100;
+	let divY = Number(element.style.top.replace("%", "")) * drawnImage.clientHeight / 100;
+	let divWidth = Number(element.style.width.replace("%", "")) * drawnImage.clientWidth / 100;
+	let divHeight = Number(element.style.height.replace("%", "")) * drawnImage.clientHeight / 100;
+
+	// If the div must be shown in side the marking area.
 	if((divX >= markingAreaX1 && divX <= markingAreaX2) &&
 	   (divY >= markingAreaY1 && divY <= markingAreaY2)) {
 		// Generate a div to mark an object on the marking area.
@@ -184,8 +213,8 @@ function showMarkedObjectOnMarkingPanel(markingAreaX1, markingAreaY1, markingAre
 		divY *= verticalRatio;
 		divWidth *= horizontalRatio;
 		divHeight *= verticalRatio;
-		const mDiv = generateDivForMarkingObject(divX - markingAreaLeftRelatedToOriginalImage,
-											 divY - markingAreaTopRelatedToOriginalImage,
+		const mDiv = generateDivForMarkingObject(divX - markingPanelLeftRelatedToOriginalImage,
+											 divY - markingPanelTopRelatedToOriginalImage,
 											 divWidth, divHeight, element.className);
 
 		mDiv.setAttribute('div-id', parseInt(element.getAttribute('id')));
@@ -227,10 +256,12 @@ function showMarkedObjectsOnMarkingPanel(clickX, clickY, onlyTheLast = false) {
 
 	// Remove all previous objects' markers from the marking panel.
 	if(false === onlyTheLast) {
-		$('.markingPanel-object').remove();
+		var elements = document.getElementsByClassName('markingPanel-object')
+		for(let i = elements.length - 1; i >= 0 ; i--) {
+			elements[i].parentNode.removeChild(elements[i]);
+		}
 	}
 	
-    let imageContainer = document.getElementById("imageContainer");
     let markingAreaWidth = imageContainer.clientWidth;
     let markingAreaHeight = imageContainer.clientHeight;
     
@@ -262,7 +293,7 @@ function editMarkingRectangle() {
 		return;
 	}
 	// Check whether there are objects marks to edit.
-	const howManyToEdit = $('.markingPanel-object').length;
+	const howManyToEdit = document.getElementsByClassName('markingPanel-object').length;
 	if(0 === howManyToEdit) {
 		alert('There is no object mark to edit.');
 		return;
@@ -270,11 +301,14 @@ function editMarkingRectangle() {
 
     hideMarkingRectangle();
 	// Allow dragging and resizing on objects marks.
-    $('.markingPanel-object').addClass('resize-drag');
-	$('.markingPanel-object').addClass('markingPanel-object-selected');
+	var elements = document.getElementsByClassName('markingPanel-object');
+	for(let i = 0; i < elements.length; i++) {
+		elements[i].classList.add('resize-drag');
+		elements[i].classList.add('markingPanel-object-selected');
+	}
 	// Hide the 'Add' button and enable the 'Update' button.
-	$('#add').hide();
-	$('#update').show();
+	addButton.classList.add('dont-display');
+	updateButton.classList.remove('dont-display');
 	
 	status = EDITING;
 }
@@ -283,14 +317,28 @@ function editMarkingRectangle() {
  * Hide the rectangular marker on the marking area.
  */
 function hideMarkingRectangle() {
-	$('#markingRectangle').hide();
+	markingRectangle.classList.add('dont-display');
+	let visibilityButton = document.getElementById('toggleMarkingRectangleVisibility');
+	visibilityButton.classList.remove('fa-eye-slash');
+	visibilityButton.classList.add('fa-eye');
 }
 
 /**
  * Show the rectangular marker on the marking area.
  */
 function showMarkingRectangle() {
-	$('#markingRectangle').show();
+	markingRectangle.classList.remove('dont-display');
+	let visibilityButton = document.getElementById('toggleMarkingRectangleVisibility');
+	visibilityButton.classList.remove('fa-eye');
+	visibilityButton.classList.add('fa-eye-slash');
+}
+
+/**
+ * Check whether the marking rectangle is visible.
+ * @return true, if yes. false, otherwise.
+ */
+function isMarkingRectangleVisible() {
+	return markingRectangle.classList.contains('dont-display');
 }
 
 /**
@@ -303,36 +351,57 @@ function toggleMarkingRectangleVisibility() {
 		return;
 	}
 
-	$('#markingRectangle').toggle();
+	if(markingRectangle.classList.contains('dont-display')) {
+		showMarkingRectangle();
+	} else {
+		hideMarkingRectangle();
+	}
 }
 
 /**
- * Delete the selected objects markings.
+ * Delete all objects' marking selected by the user.
+ * An object's marking is selected if it has an attribute selected with value equals to true.
  */
 function deleteSelectedObjectMarkings() {
-	const howManyToDelete = $('.markingPanel-object[selected=true]').length;
+	const howManyToDelete = document.querySelectorAll('.markingPanel-object[selected=true]').length;
 	if(0 === howManyToDelete) {
-		alert('There is no object mark to delete.');
+		alert('There are no objects\' marking to delete.');
 		return;
 	}
-	var confirmAnswer = confirm(`Do you really want to remove the ${howManyToDelete} selected marks!`);
+	var confirmAnswer = confirm(`Do you really want to remove the ${howManyToDelete} selected objects' marking?`);
 	if (true === confirmAnswer) {
 		// Remove each mark from the markedObjects array.
-		$('.markingPanel-object[selected=true]').each(function() {
-			let divId = $(this).attr('div-id');
-			$('#' + markedObjects[divId].id).remove();
-            markedObjects.splice(divId, 1);
-		});
-		// Remove the marks from the marking area.
-        $('.markingPanel-object-selected').remove();
+		let elements = document.querySelectorAll('.markingPanel-object[selected=true]');
+		for(let i = 0; i < elements.length; i++) {
+			let divId = elements[i].getAttribute('div-id');
+			let elementToRemove = document.getElementById(markedObjects[divId].id);
+			elementToRemove.parentNode.removeChild(elementToRemove);
+            markedObjects.splice(divId, 1);			
+		}
+		// Remove the markings from the marking area.
+		elements = document.getElementsByClassName('markingPanel-object-selected');
+		for(let i = elements.length - 1; i >= 0; i--) {
+			elements[i].parentNode.removeChild(elements[i]);
+		}
 	}
 }
 
 /**
- * Display the objects of the type specified as argument.
+ * Toggle the visibility of the objects of the type specified as argument.
+ * @param typeCheckbox The checkbox whose value is equal to the class of the objects' markings
+ *                     whose visibility will be changed.
  */
-function displayObjects(typeCheckbox) {
-	(typeCheckbox.checked ? $('.' + typeCheckbox.value).show() : $('.' + typeCheckbox.value).hide());
+function toggleObjectsMarkingVisibility(typeCheckbox) {
+	let elements = document.getElementsByClassName(typeCheckbox.value);
+	if(true === typeCheckbox.checked) {	
+		for(let i = 0; i < elements.length; i++) {
+			elements[i].classList.remove('dont-display');
+		}
+	} else {
+		for(let i = 0; i < elements.length; i++) {
+			elements[i].classList.add('dont-display');
+		}
+	}
 }
 
 /**
@@ -345,7 +414,123 @@ function calculateRatios() {
 	verticalRatio = originalImageHeight / drawnImage.height();	
 }
 
+/**
+ * Convert the specified horizontal percentage into pixels.
+ * @param {Number} horizontalPercentage The horizontal percentage that must be converted.
+ */
+function horizontalPercentageToPixel(horizontalPercentage) {
+	horizontalPercentage = (typeof horizontalPercentage === typeof('sample')) ? parseFloat(horizontalPercentage.replace('%','')) : horizontalPercentage;
+	return horizontalPercentage * drawnImage.clientWidth / 100;
+}
+
+/**
+ * Convert the specified vertical percentage into pixels.
+ * @param {Number} verticalPercentage The vertical percentage that must be converted.
+ */
+function verticalPercentageToPixel(verticalPercentage) {
+	verticalPercentage = (typeof verticalPercentage === typeof('sample')) ? parseFloat(verticalPercentage.replace('%','')) : verticalPercentage;
+	return verticalPercentage * drawnImage.clientHeight / 100;
+}
+
+/**
+ * Convert the specified horizontal pixels into percentage.
+ * @param {Number} horizontalPixel The horizontal pixels that must be converted.
+ */
+function horizontalPixelToPercentage(horizontalPixel) {
+	horizontalPixel = (typeof horizontalPixel === typeof('sample')) ? parseFloat(horizontalPixel.replace('px','')) : horizontalPixel;
+	return horizontalPixel / drawnImage.clientWidth * 100;
+}
+
+/**
+ * Convert the specified vertical pixels into percentage.
+ * @param {Number} verticalPixel The vertical pixels that must be converted.
+ */
+
+function verticalPixelToPercentage(verticalPixel) {
+	verticalPixel = (typeof verticalPixel === typeof('sample')) ? parseFloat(verticalPixel.replace('px','')) : verticalPixel;
+	return verticalPixel / drawnImage.clientHeight * 100;
+}
+
+/**
+ * Register the interaction with objects' markings.
+ */
+function registerInteractionWithMarkings() {
+	// Every element with the 'resize-drag' class must allow user interaction
+	// for dragging and resizing.
+	interact('.resize-drag')
+		.draggable({
+			onmove: window.dragMoveListener,
+			restrict: {
+				restriction: 'parent',
+				elementRect: {top: 0, left: 0, bottom: 1, right: 1}
+			},
+			inertia: true,
+		})
+		.resizable({
+			// Resize from all edges and corners.
+			edges: {left: true, right: true, bottom: true, top: true},
+
+			// Keep the edges inside the parent.
+			restrictEdges: {
+				outer: 'parent',
+				endOnly: true,
+			},
+
+			// Minimum size.
+			restrictSize: {
+				min: {width: 30, height: 30},
+			},
+
+			inertia: true,
+		})
+		.on('dragmove', function (event) {
+			var target = event.target,
+				x = (parseFloat(target.getAttribute('data-x')) || 0),
+				y = (parseFloat(target.getAttribute('data-y')) || 0);
+			x += event.dx;
+			y += event.dy;
+
+			event.target.style.webkitTransform =
+				event.target.style.transform =
+					'translate(' + x + 'px, ' + y + 'px)';
+			target.setAttribute('data-x', x);
+			target.setAttribute('data-y', y);
+		})
+		.on('resizemove', function (event) {
+			var target = event.target,
+				x = (parseFloat(target.getAttribute('data-x')) || 0),
+				y = (parseFloat(target.getAttribute('data-y')) || 0);
+
+			// Update the element's width and height.
+			target.style.width = event.rect.width + 'px';
+			target.style.height = event.rect.height + 'px';
+
+			target.setAttribute('data-width', event.rect.width);
+			target.setAttribute('data-height', event.rect.height);
+
+			// translate when resizing from top or left edges
+			x += event.deltaRect.left;
+			y += event.deltaRect.top;
+
+			target.style.webkitTransform = target.style.transform =
+				'translate(' + x + 'px,' + y + 'px)';
+
+			target.setAttribute('data-x', x);
+			target.setAttribute('data-y', y);
+		});	
+}
+
 $(document).ready(function () {
+	// Store references to some HTML elements.
+	drawnImage = document.getElementById('drawnImage');
+	imageContainer = document.getElementById('imageContainer');
+	markingPanel = document.getElementById('markingPanel');
+	markingRectangle = document.getElementById('markingRectangle');
+	originalImagePanel = document.getElementById("originalImagePanel");
+	updateButton = document.getElementById("update");
+	addButton = document.getElementById("add");
+	imageForMarking = document.getElementById("imageForMarking");
+	
 	// Require the original image size and calculate some measures that will
 	// be used later by other functions.
 	getOriginalImageSize(function (originalImage) {
@@ -357,7 +542,8 @@ $(document).ready(function () {
 		// be used later for other functions.
         $(window).resize(function() {
 			calculateRatios();
-			adjustMarkingAreaSize();
+			adjustMarkingPanelSize();
+			registerInteractionWithMarkings();
 		});
 		calculateRatios(); // Call it at least once.
 	});
@@ -367,124 +553,53 @@ $(document).ready(function () {
         zoomType: "lens",
         lensShape: "round",
         lensSize: 300,
-        scrollzoom: true,
+		scrollzoom: true,
         responsive: true,
         containLensZoom: true
     });
 
-	// Every element with the 'resize-drag' class must allow user interaction
-	// for dragging and resizing.
-    interact('.resize-drag')
-        .draggable({
-            onmove: window.dragMoveListener,
-            restrict: {
-                restriction: 'parent',
-                elementRect: {top: 0, left: 0, bottom: 1, right: 1}
-            },
-            inertia: true,
-        })
-        .resizable({
-            // Resize from all edges and corners.
-            edges: {left: true, right: true, bottom: true, top: true},
-
-            // Keep the edges inside the parent.
-            restrictEdges: {
-                outer: 'parent',
-                endOnly: true,
-            },
-
-            // Minimum size.
-            restrictSize: {
-                min: {width: 30, height: 30},
-            },
-
-            inertia: true,
-        })
-        .on('dragmove', function (event) {
-            var target = event.target,
-                x = (parseFloat(target.getAttribute('data-x')) || 0),
-                y = (parseFloat(target.getAttribute('data-y')) || 0);
-            x += event.dx;
-            y += event.dy;
-    
-            event.target.style.webkitTransform =
-                event.target.style.transform =
-                    'translate(' + x + 'px, ' + y + 'px)';
-            target.setAttribute('data-x', x);
-            target.setAttribute('data-y', y);
-        })
-        .on('resizemove', function (event) {
-            var target = event.target,
-                x = (parseFloat(target.getAttribute('data-x')) || 0),
-                y = (parseFloat(target.getAttribute('data-y')) || 0);
-
-            // Update the element's width and height.
-            target.style.width = event.rect.width + 'px';
-            target.style.height = event.rect.height + 'px';
-
-            target.setAttribute('data-width', event.rect.width);
-            target.setAttribute('data-height', event.rect.height);
-
-            // translate when resizing from top or left edges
-            x += event.deltaRect.left;
-            y += event.deltaRect.top;
-
-            target.style.webkitTransform = target.style.transform =
-                'translate(' + x + 'px,' + y + 'px)';
-
-            target.setAttribute('data-x', x);
-            target.setAttribute('data-y', y);
-        });
-
-    $('.markingPanel-object').select();
-
+	registerInteractionWithMarkings();
+	
 	// Callback is automatically called by a modified version of jquery.elevateZoom
 	// we implemented when the user clicks over the drawn image.
     callback = function (clientX, clientY) {
-        getOriginalImageSize(function (originalImage) {
-			// Get the image (x, y) coordinate where the user clicked on.
-            const drawnImage = $("#drawnImage");
-            const topOffset = drawnImage.offset().top - $(window).scrollTop();            
-            const leftOffset = drawnImage.offset().left - $(window).scrollLeft();
-            const imageX = Math.round((clientX - leftOffset));
-            const imageY = Math.round((clientY - topOffset));
-			clickedX = imageX;
-			clickedY = imageY;
+		// Get the image (x, y) coordinate where the user clicked on.
+		let jqueryDrawnImage = $('#drawnImage');
+		const topOffset = jqueryDrawnImage.offset().top - $(window).scrollTop();
+		const leftOffset = jqueryDrawnImage.offset().left - $(window).scrollLeft();
+		const imageX = Math.round((clientX - leftOffset));
+		const imageY = Math.round((clientY - topOffset));
+		clickedX = imageX;
+		clickedY = imageY;
 
-			// Calculate the horizontal and vertical ratio between the original
-			// and the drawn image.
+		// Calculate the position of the marking area background that must be
+		// set to show the region around the (x, y) coordinate where the user
+		// clicked on.
+		const markingAreaWidth = imageContainer.clientWidth;
+		const markingAreaHeight = imageContainer.clientHeight;
+		const deltaX = -imageX * horizontalRatio + markingAreaWidth / 2;
+		const deltaY = -imageY * verticalRatio + markingAreaHeight / 2;
+		// Store the marking area top-left position related to the original image.
+		markingPanelTopRelatedToOriginalImage = imageY * verticalRatio - markingAreaHeight / 2;
+		markingPanelLeftRelatedToOriginalImage = imageX * horizontalRatio - markingAreaWidth / 2;
+		imageForMarking.style.backgroundPosition = `${deltaX}px ${deltaY}px`;
 
-			// Calculate the position of the marking area background that must be
-			// set to show the region around the (x, y) coordinate where the user
-			// clicked on.
-            const markingAreaWidth = $("#imageContainer").width();
-            const markingAreaHeight = $("#imageContainer").height();
-            const deltaX = -imageX * horizontalRatio + markingAreaWidth / 2;
-            const deltaY = -imageY * verticalRatio + markingAreaHeight / 2;
-			// Store the marking area top-left position related to the original image.
-            markingAreaTopRelatedToOriginalImage = imageY * verticalRatio - markingAreaHeight / 2;
-            markingAreaLeftRelatedToOriginalImage = imageX * horizontalRatio - markingAreaWidth / 2;
-            $("#imageForMarking").css("background-position", deltaX + "px " + deltaY + "px");
-
-            // Verify if there are objects marked on the original image that must
-			// be displayed on the marking panel and show any.
-            showMarkedObjectsOnMarkingPanel(imageX, imageY);
-			// If there no marking rectangle (on the marking area) is shown, show
-			// one.
-            if (0 === $("#markingRectangle")) {
-                toggleMarkingRectangleVisibility();
-            }
-
-        });
+		// Verify if there are objects marked on the original image that must
+		// be displayed on the marking panel and show any.
+		showMarkedObjectsOnMarkingPanel(imageX, imageY);
+		// If there no marking rectangle (on the marking area) is shown, show
+		// one.
+		if (!isMarkingRectangleVisible()) {
+			showMarkingRectangle();
+		}
     }; // End of callback.
 
     // As the initial value of data-x, data-y, data-width, and data-height is null,
 	// set it to zero.
-    var markingRectangle = $("#markingRectangle");
-    markingRectangle.attr('data-x', 0);
-    markingRectangle.attr('data-y', 0);
-    markingRectangle.attr('data-width', $(".resize-drag").css("width"));
-    markingRectangle.attr('data-height', $(".resize-drag").css("height"));
+    markingRectangle.setAttribute('data-x', 0);
+    markingRectangle.setAttribute('data-y', 0);
+    markingRectangle.setAttribute('data-width', $(".resize-drag").css("width"));
+    markingRectangle.setAttribute('data-height', $(".resize-drag").css("height"));
 
     // Create a toggle button for selecting the object type.
     $('#objectType').bootstrapToggle({
